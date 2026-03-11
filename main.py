@@ -3,11 +3,19 @@ from fastapi import FastAPI
 from fastapi.responses import PlainTextResponse
 from collections.abc import ItemsView, Mapping
 from enum import Enum
-from typing import NamedTuple, TypedDict, Any, cast
+from typing import NamedTuple, TypedDict, Any, cast, TypeGuard
 import asyncio
 import aiohttp
 import json
 from datetime import datetime, timezone
+import logging
+from pydantic import TypeAdapter, ValidationError
+
+logger = logging.getLogger("validation")
+logger.setLevel(logging.ERROR)
+handler = logging.FileHandler("validation_errors.log")
+handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+logger.addHandler(handler)
 
 app = FastAPI()
 
@@ -123,6 +131,14 @@ class Ferry(TypedDict):
     destination: str
     players: int
     captain: FerryCaptain
+
+game_session_adapter = TypeAdapter(GameSession)
+village_adapter = TypeAdapter(Village)
+dungeon_adapter = TypeAdapter(Dungeon)
+multiplier_adapter = TypeAdapter(GameMultiplier)
+raid_adapter = TypeAdapter(Raid)
+ferry_adapter = TypeAdapter(Ferry)
+player_list_adapter = TypeAdapter(list[Player])
 
 
 MAX_LEVEL = 999
@@ -264,6 +280,16 @@ async def metrics():
     instance_data = [results[i:i + requests_per_server] for i in range(0, len(results), requests_per_server)]
     # t0 = time.monotonic()
     m = Metrics()
+    def validate_data[T](data_to_validate: Any, adapter: TypeAdapter[T], name: str) -> TypeGuard[T]:
+        if data_to_validate is not None and isinstance(data_to_validate, (dict, list)):
+            try:
+                _ = adapter.validate_python(data_to_validate, strict=True)
+                return True
+            except ValidationError as e:
+                logger.error("Validation error for %s: %s\nData: %s", name, e, data_to_validate)
+                return False
+        return False
+
     for data in instance_data:
         data_f: list[dict[str, Any] | list[Player] | None] = []
         for d in data:
@@ -279,8 +305,9 @@ async def metrics():
         raid: Raid | None
         ferry: Ferry | None
         players: list[Player] | None
+
         
-        if not isinstance(session_, dict):
+        if not validate_data(session_, game_session_adapter, "GameSession"):
             continue
         if not session_.get("twitchusername"):
             continue
@@ -296,7 +323,7 @@ async def metrics():
         m.add_value("rf_session_duration_seconds", session_.get('secondssincestart'), label_dict=labels)
         m.add_def("rf_players_in_session", "Number of players in the session", value=session_.get('players'), label_dict=labels)
         
-        if isinstance(dungeon, dict):
+        if validate_data(dungeon, dungeon_adapter, "Dungeon"):
             m.add_def("rf_dungeon_info", "Textual info about the dungeon")
             m.add_value("rf_dungeon_info", 1, name=dungeon.get('name', ''), label_dict=labels)
             m.add_def("rf_dungeon_started", "Dungeon has started")
@@ -319,7 +346,7 @@ async def metrics():
                         dungeon_healths[session_.get("twitchusername")] = dungeon.get('boss', {}).get('health')
             m.add_def("rf_dungeon_boss_max_health", "Maximum health of the dungeon boss", value=dungeon_healths.get(session_.get("twitchusername")), label_dict=labels)
         
-        if isinstance(multiplier, dict):
+        if validate_data(multiplier, multiplier_adapter, "GameMultiplier"):
             m.add_def("rf_multiplier_info", "Textual info about the multiplier", value=1, event_name=multiplier.get('eventname'), label_dict=labels)
             m.add_def("rf_multiplier_active", "Multiplier is active", value=multiplier.get('active'), label_dict=labels)
             m.add_def("rf_multiplier_elapsed_time_seconds", "Seconds since multiplier event started", value=multiplier.get('elapsed'), label_dict=labels)
@@ -334,7 +361,7 @@ async def metrics():
             m.add_def("rf_multiplier_end_timestamp_seconds", "End timestamp of multiplier", value=mult_end_ts, label_dict=labels)
             m.add_def("rf_multiplier_value", "Current multiplier factor", value=multiplier.get('multiplier'), label_dict=labels)
         
-        if isinstance(raid, dict):
+        if validate_data(raid, raid_adapter, "Raid"):
             m.add_def("rf_raid_started", "Raid has started", value=raid.get('started'), label_dict=labels)
             m.add_def("rf_raid_players_total", "Number of players participating", value=raid.get('players'), label_dict=labels)
             m.add_def("rf_raid_time_remaining_seconds", "Time left until raid fails", value=raid.get('timeleft'), label_dict=labels)
@@ -343,7 +370,7 @@ async def metrics():
             m.add_def("rf_raid_boss_max_health", "Maximum health of the raid boss", value=raid.get('boss', {}).get('maxhealth'), label_dict=labels)
             m.add_def("rf_raid_boss_combat_level", "Combat level of the raid boss", value=raid.get('boss', {}).get('combatlevel'), label_dict=labels)
         
-        if isinstance(ferry, dict):
+        if validate_data(ferry, ferry_adapter, "Ferry"):
             m.add_def(
                 "rf_ferry_info", "Textual information about the ferry", value=1, 
                 destination=ferry.get('destination'), captain=ferry.get('captain', {}).get('name', ''), label_dict=labels
@@ -366,7 +393,7 @@ async def metrics():
         resting_count = 0
         total_experience_by_skill: dict[str, float] = {}
         total_experience_by_session = 0
-        if isinstance(players, (list, tuple)):
+        if validate_data(players, player_list_adapter, "Players"):
             for player in players:
                 m.add_value(
                     "rf_player_info", 1,
@@ -440,7 +467,7 @@ async def metrics():
                 "rf_session_experience_by_skill_total", total_exp, stat=skill_name, label_dict=labels
             )
         
-        if isinstance(village, dict):
+        if validate_data(village, village_adapter, "Village"):
             boost_stats: list[str] = []
             for a in village.get('boost', '').split(', '):
                 split = a.split(' ', maxsplit=1)

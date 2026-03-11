@@ -170,3 +170,5 @@ servers.json
 
 logs/
 output/
+
+*.log
