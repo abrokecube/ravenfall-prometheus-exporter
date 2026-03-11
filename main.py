@@ -251,14 +251,16 @@ async def metrics():
             f"{thing}/select * from players",
         ])
 
-    async with aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
         tasks = [fetch(session, url) for url in urls]
-        results = await asyncio.gather(*tasks)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
     instance_data = [results[i:i + requests_per_server] for i in range(0, len(results), requests_per_server)]
     # t0 = time.monotonic()
     m = Metrics()
     for data in instance_data:
         if None in data:
+            continue
+        if any(isinstance(x, Exception) for x in data):
             continue
         session_, village, dungeon, multiplier, raid, ferry, players = data
         session_: GameSession
