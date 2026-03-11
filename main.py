@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 import logging
 from pydantic import TypeAdapter, ValidationError
 
+mainlogger = logging.getLogger("main")
 logger = logging.getLogger("validation")
 logger.setLevel(logging.ERROR)
 handler = logging.FileHandler("validation_errors.log")
@@ -286,7 +287,8 @@ async def metrics():
                 _ = adapter.validate_python(data_to_validate, strict=True)
                 return True
             except ValidationError as e:
-                logger.error("Validation error for %s: %s\nData: %s", name, e, data_to_validate)
+                mainlogger.error("Validation error for %s: %s", name, e)
+                logger.error("Validation error for %s: %s\n Data: %s", name, e, data_to_validate)
                 return False
         return False
 
