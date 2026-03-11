@@ -51,12 +51,12 @@ class GameMultiplier(TypedDict):
 class Boss(TypedDict):
     health: int
     maxhealth: int
-    healthpercent: int
+    healthpercent: float
     combatlevel: int
     
 class Dungeon(TypedDict):
     started: bool
-    secondsuntilstart: int
+    secondsuntilstart: float
     name: str
     room: int
     players: int
@@ -104,7 +104,7 @@ class Player(TypedDict):
     id: str
     name: str
     training: str
-    taskargument: str
+    taskargument: str | None
     island: str
     sailing: bool
     resting: bool
