@@ -10,6 +10,7 @@ import json
 from datetime import datetime, timezone
 import logging
 from pydantic import TypeAdapter, ValidationError
+from enum import StrEnum
 
 mainlogger = logging.getLogger("main")
 logger = logging.getLogger("validation")
@@ -31,6 +32,7 @@ def to_timestamp(timestamp_str: str):
         print(e)
         return 0
 
+# select * from session
 class GameSession(TypedDict):
     authenticated: bool
     sessionstarted: bool
@@ -39,6 +41,7 @@ class GameSession(TypedDict):
     gameversion: str
     secondssincestart: float
 
+# select * from multiplier
 class GameMultiplier(TypedDict):
     eventname: str | None
     active: bool
@@ -49,12 +52,14 @@ class GameMultiplier(TypedDict):
     starttime: str
     endtime: str
 
+
 class Boss(TypedDict):
     health: int
     maxhealth: int
     healthpercent: float
     combatlevel: int
-    
+
+# select * from dungeon
 class Dungeon(TypedDict):
     started: bool
     secondsuntilstart: float
@@ -68,13 +73,15 @@ class Dungeon(TypedDict):
     count: int
     boss: Boss
 
+# select * from raid
 class Raid(TypedDict):
     started: bool
     players: int
     timeleft: float
     count: int
     boss: Boss
-    
+
+
 class PlayerStat(TypedDict):
     level: int
     currentvalue: int
@@ -101,6 +108,8 @@ class PlayerStats(TypedDict):
     gathering: PlayerStat
     alchemy: PlayerStat
 
+# select * from players
+# select * from observed
 class Player(TypedDict):
     id: str
     name: str
@@ -118,11 +127,14 @@ class Player(TypedDict):
     commandidletime: float
     stats: PlayerStats
 
+
+# select * from village
 class Village(TypedDict):
     name: str
     level: int
     tier: int
     boost: str
+
 
 class FerryCaptain(TypedDict):
     name: str
@@ -132,11 +144,108 @@ class FerryBoost(TypedDict):
     isactive: bool
     remainingtime: float
 
+# select * from ferry
 class Ferry(TypedDict):
     destination: str
     players: int
     captain: FerryCaptain
     boost: FerryBoost
+
+
+class IslandLevels(TypedDict):
+    skill: int
+    combat: int
+
+class IslandName(StrEnum):
+    HOME = "Home"
+    AWAY = "Away"
+    IRONHILL = "Ironhill"
+    KYO = "Kyo"
+    HEIM = "Heim"
+    ATRIA = "Atria"
+    ELDARA = "Eldara"
+    WAR = "War"
+
+# select * from islands
+class Island(TypedDict):
+    name: IslandName
+    players: int
+    level: IslandLevels
+
+# select * from redeemables
+class Redeemable(TypedDict):
+    itemid: str
+    name: str
+    description: str | None
+    currency: str
+    cost: int
+
+
+class GameSettings(TypedDict):
+    playercacheexpirytimeindex: int
+    camerarotationspeed: int
+    daynighttime: int
+    daynightcycleenabled: bool
+    realtimedaynightcycle: bool
+    autokickafkplayers: bool
+    localbotserverdisabled: bool
+    alertexpiredstatecacheinchat: bool
+    canobserveemptyislands: bool
+    playerboostrequirement: int
+    itemdropmessagetype: int
+    pathfindingqualitysettings: int
+    localbotport: int
+    islandobserveseconds: int
+
+class SoundSettings(TypedDict):
+    musicvolume: int
+    raidhornvolume: int
+
+class UISettings(TypedDict):
+    playernamesvisible: bool
+    playerlistsize: int
+    playerlistscale: float
+
+class GraphicsSettings(TypedDict):
+    qualitylevel: int
+    dpiscale: int
+    potatomode: bool
+    autopotatomode: bool
+    postprocessing: bool
+
+class QueryEngineSettings(TypedDict):
+    enabled: bool
+    alwaysreturnarray: bool
+    apiprefix: str
+
+class StreamLabelsSettings(TypedDict):
+    enabled: bool
+    savetextfiles: bool
+    savejsonfiles: bool
+
+class PlayerObserveSeconds(TypedDict):
+    default: int
+    subscriber: int
+    moderator: int
+    vip: int
+    broadcaster: int
+    onsubcription: int
+    oncheeredbits: int
+
+class LootSettings(TypedDict):
+    includeorigin: bool
+
+# select * from settings
+class GameConfig(TypedDict):
+    game: GameSettings
+    sound: SoundSettings
+    ui: UISettings
+    graphics: GraphicsSettings
+    queryengine: QueryEngineSettings
+    streamlabels: StreamLabelsSettings
+    playerobserveseconds: PlayerObserveSeconds
+    loot: LootSettings
+
 
 game_session_adapter = TypeAdapter(GameSession)
 village_adapter = TypeAdapter(Village)
