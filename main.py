@@ -362,8 +362,11 @@ async def fetch(session: aiohttp.ClientSession, url: str) -> Any | None:
         if response.status == 200:
             try:
                 response = await response.json()
-                if isinstance(response, dict) and "error" in response:
-                    raise QueryException(response['error'])
+                if isinstance(response, dict):
+                    if not response:
+                        return None
+                    if "error" in response:
+                        raise QueryException(response['error'])
                 return response
             except aiohttp.ContentTypeError:
                 return None
@@ -426,7 +429,7 @@ async def metrics():
         multiplier: GameMultiplier | None
         raid: Raid | None
         ferry: Ferry | None
-        players: list[Player] | None
+        players: Player | list[Player] | None
 
         
         if not validate_data(session_, game_session_adapter, "GameSession"):
@@ -517,6 +520,8 @@ async def metrics():
         resting_count = 0
         total_experience_by_skill: dict[str, float] = {}
         total_experience_by_session = 0
+        if isinstance(players, dict):
+            players = [players]
         if validate_data(players, player_list_adapter, "Players"):
             for player in players:
                 m.add_value(
