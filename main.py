@@ -36,7 +36,7 @@ def to_timestamp(timestamp_str: str):
 class GameSession(TypedDict):
     authenticated: bool
     sessionstarted: bool
-    twitchusername: str
+    twitchusername: str | None
     players: int
     gameversion: str
     secondssincestart: float
