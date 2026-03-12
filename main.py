@@ -128,10 +128,15 @@ class FerryCaptain(TypedDict):
     name: str
     sailinglevel: int
 
+class FerryBoost(TypedDict):
+    isactive: bool
+    remainingtime: float
+
 class Ferry(TypedDict):
     destination: str
     players: int
     captain: FerryCaptain
+    boost: FerryBoost
 
 game_session_adapter = TypeAdapter(GameSession)
 village_adapter = TypeAdapter(Village)
@@ -385,6 +390,8 @@ async def metrics():
             )
             m.add_def("rf_ferry_players_total", "Number of players on the ferry", value=ferry.get('players'), label_dict=labels)
             m.add_def("rf_ferry_captain_sailing_skill_level", "Sailing level of the captain", value=ferry.get('captain', {}).get('sailinglevel'), label_dict=labels)
+            m.add_def("rf_ferry_boost_remaining_time_seconds", "Remaining time of the ferry boost", value=ferry['boost']['remainingtime'], label_dict=labels)
+            m.add_def("rf_ferry_boost_active", "Ferry boost is active", value=ferry['boost']['isactive'], label_dict=labels)
         
         m.add_def("rf_player_info", "Info about players in the session")
         m.add_def("rf_player_stat_base_level", "Current base level of stat", MetricType.COUNTER)
