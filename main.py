@@ -40,7 +40,7 @@ class GameSession(TypedDict):
     secondssincestart: float
 
 class GameMultiplier(TypedDict):
-    eventname: str
+    eventname: str | None
     active: bool
     multiplier: float
     elapsed: float
