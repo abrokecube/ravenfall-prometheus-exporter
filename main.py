@@ -240,11 +240,17 @@ class Metrics:
             )
         return "\n".join(out_text)
 
+class QueryException(BaseException):
+    pass
+
 async def fetch(session: aiohttp.ClientSession, url: str) -> Any | None:
     async with session.get(url) as response:
         if response.status == 200:
             try:
-                return await response.json()
+                response = await response.json()
+                if isinstance(response, dict) and "error" in response:
+                    raise QueryException(response['error'])
+                return response
             except aiohttp.ContentTypeError:
                 return None
         else:
